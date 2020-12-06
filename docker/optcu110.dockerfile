@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.0-devel-ubuntu20.04
+FROM nvidia/cuda:11.1-cudnn8-runtime-ubuntu18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -20,7 +20,7 @@ RUN conda update -y conda && \
 	conda install -y -c conda-forge jupyterlab
 RUN mkdir /.local # && chown ${USER_ID} /.local
 
-git clone https://github.com/mvkvc/options-research /ddpg_daibing
+RUN git clone https://github.com/mvkvc/options-research /ddpg_daibing
 RUN python3 -m pip install -r /ddpg_daibing/docker/requirements.txt
 
 RUN jupyter notebook --generate-config -y
