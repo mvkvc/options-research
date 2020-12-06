@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.1-cudnn8-runtime-ubuntu18.04
+FROM nvidia/cuda:11.0-cudnn8-runtime-ubuntu18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -8,12 +8,12 @@ USER root
 WORKDIR /
 
 RUN apt-get update && apt-get install -y \
-	curl tar tmux build-essential git ninja-build ccache libopenblas-dev \
+	python3.6 curl tar tmux build-essential git ninja-build ccache libopenblas-dev \
 	libopencv-dev python3-opencv
 
-RUN curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-	bash Miniconda3-latest-Linux-x86_64.sh -p /miniconda -b && \
-	rm Miniconda3-latest-Linux-x86_64.sh
+RUN curl -LO https://repo.anaconda.com/miniconda/Miniconda3-3.6.0-Linux-x86_64.sh && \
+	bash Miniconda3-3.6.0-Linux-x86_64.sh -p /miniconda -b && \
+	rm Miniconda3-3.6.0-Linux-x86_64.sh
 ENV PATH=/miniconda/bin:${PATH}
 
 RUN conda update -y conda && \
