@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/ddpg_daibing')
+
 from ddpg_daibing.ddpg_model import Model
 from ddpg_daibing.ddpg import Agent
 from ddpg_daibing.ReplayBuffer import Replay_Buffer
