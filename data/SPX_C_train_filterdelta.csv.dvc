@@ -1,0 +1,4 @@
+outs:
+- md5: 81bfedfb826f542ff2b64b30896a3428
+  size: 269698574
+  path: SPX_C_train_filterdelta.csv
