@@ -1,0 +1,43 @@
+Reimplementing DDPG from Continuous Control with Deep Reinforcement Learning based on Tensorflow-gpu 1.3 and python3.6
+to solve option delta heding problem.
+
+Data:
+
+we have call option and put option data from four index.
+
+How to use?
+
+1.ActorNetwork:Build ActorNetwork and some intial work(such as training ops)
+
+2.CriticNetwork:Build CriticNetwork and some intial work(such as training ops)
+
+3.ddpg:Package some training process,storing memory item and select action process
+
+4.ddpg_model:Further package work for neural network's optimization based on ddpg.py
+
+5.OU:we did not use OU process directly,nevertheless use anther stochastic process to add noise for direct action
+
+6.Replay Buffer:Build Memory Replay Buffer,mainly define relative function for Buffer
+
+7.main_code:Main code,which contains model's sampling,training ,retest for  hedging performance,and illustration of outcome
+
+Some assumption for DDPG:
+
+1.state:
+
+S_t=(S,V),S is underlying price,V is option price.
+
+2.Action:
+
+action in [0,1] if call option
+
+action in [-1,0] if put option
+
+3.Reward function:
+
+main sparse reward +subordinary reward:
+
+subordinary reward=1/100*(|error ddpg_t-1|-|error ddpg_t|)
+subordinary+=1/1000*|error ddpg| if |error ddpg|>2.5
+
+main reward=1000 if |terminal hedging error|<2.5
