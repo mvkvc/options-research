@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import random
 import os
 import csv
-#12 2点多和1点多，0.4开始负;13 1.5几，0.4左右
+#12 2 point more and 1 point more，0.4 start negative; 13 1.5几，0.4 about
 fenmu = 13#the factor to mutiply the outcome of ActorNetwork,then add delta_BS
 BATCH_SIZE = 2 **8
 BUFFER_SIZE = 1e4
@@ -30,9 +30,9 @@ type_option='C'
 index_now='SPX_0'
 option='SPX_C'
 """
-注意C换成P option，需要更改Actor的激活函数!!!!!!
+Note that C is replaced by P option，Need to change Actor activation function!!!!!!
 """
-#############注意SP500数据列的顺序#########
+#############Note SP500 the order of the data columns#########
 ####get training data###################
 base_path=os.path.dirname(os.getcwd())
 path = os.path.join(base_path, 'ddpg_daibing/train_data/SPX_C_train_filterdelta.csv')
@@ -42,7 +42,7 @@ contract = [df for item, df in contract_data ]
 # Upset the training and testing sample to eliminate the correlation
 random.shuffle(contract)
 #
-#print('合约数量：{}'.format(len(contract)))
+print('Number of contracts：{}'.format(len(contract)))
 state_dim = 2
 action_dim = 1
 #Initialize Agent,memory Buffer,OU process
@@ -69,7 +69,7 @@ def test_performance(agent, test_data_flag,use_bs=is_bs,option_type=type_option)
     error_ddpg_list = []
     mem=[]
     for flag in test_data_flag:  # Loop on all testing sample
-        print('新合约...')
+        print('New contract...')
         contract_now = contract[flag]
         i = 0
         max_i = contract_now.shape[0] - 1
@@ -96,8 +96,8 @@ def test_performance(agent, test_data_flag,use_bs=is_bs,option_type=type_option)
                 delta_BS = contract_now.iloc[i-1, 4]
             action = agent.predict_action(state)
             a_test=action
-            print('输出的DDPG头寸为{}'.format(action))
-            print('BS公式头寸为{}'.format(delta_BS))
+            print('The output DDPG position is{}'.format(action))
+            print('BS formula position is{}'.format(delta_BS))
             if use_bs == 1:
                 action = delta_BS + action / fenmu
 
@@ -113,8 +113,8 @@ def test_performance(agent, test_data_flag,use_bs=is_bs,option_type=type_option)
             Bank_money_ddpg = Bank_money_ddpg * (1 + bank_ratio)
             error_ddpg = V_next - action * S_next - Bank_money_ddpg
             error_bs = V_next - delta_BS * S_next - Bank_money_bs
-            print('DDPG误差为{}'.format(error_ddpg))
-            print('BS误差为{}'.format(error_bs))
+            print('DDPG error is{}'.format(error_ddpg))
+            print('BS error is{}'.format(error_bs))
             mem.append([delta_BS,error_bs,action,error_ddpg,a_test])
             state_next = [S_next, V_next]
             state_next = np.reshape(state_next, (1, 2))
@@ -124,7 +124,7 @@ def test_performance(agent, test_data_flag,use_bs=is_bs,option_type=type_option)
                 break
 
             if np.isnan(error_bs):
-                print('出现错误')
+                print('An error occurred')
                 print(V_next)
                 print(delta_BS)
                 print(S_next)
@@ -135,13 +135,13 @@ def test_performance(agent, test_data_flag,use_bs=is_bs,option_type=type_option)
             error_BS_list.append(error_bs)
             error_ddpg_list.append(error_ddpg)
     #####save data for analysis########
-    with open('/home/daibing/下载/delta_hedging/ddpg_daibing/error_bs.csv','w',newline='') as t:
+    with open('/ddpg_daibing/error_bs.csv','w',newline='') as t:
         writer=csv.writer(t)
         writer.writerow(error_BS_list)
-    with open('/home/daibing/下载/delta_hedging/ddpg_daibing/error_ddpg.csv','w',newline='') as t_:
+    with open('/ddpg_daibing/error_ddpg.csv','w',newline='') as t_:
         writer=csv.writer(t_)
         writer.writerow(error_ddpg_list)
-    with open('/home/daibing/下载/delta_hedging/ddpg_daibing/mem.csv','w',newline='') as t__:
+    with open('/ddpg_daibing/mem.csv','w',newline='') as t__:
         writer=csv.writer(t__)
         writer.writerows(mem)
     return error_BS_list, error_ddpg_list
@@ -239,7 +239,7 @@ def plot_figure(fig_number, bs_list, ddpg_list,type,txt_name,index_name):
         temp_ = [itemm_2 for itemm_2 in ddpg_list if bu_2[i]<itemm_2 <bu_2[i+1]]
         y_bs__.append(len(temp))
         y_ddpg__.append(len(temp_))
-    file = open('/home/daibing/下载/delta_hedging/ddpg_daibing/good/'+option+'/'+diction+'/'+txt_name+'.txt', 'w')
+    file = open('/ddpg_daibing/good/'+option+'/'+diction+'/'+txt_name+'.txt', 'w')
     for w in bu_1:
         file.write(str(w))
         file.write(' ')
@@ -260,20 +260,20 @@ def plot_figure(fig_number, bs_list, ddpg_list,type,txt_name,index_name):
         file.write(' ')
     file.close()
     for jj in range(4):
-        print('区间段[{},{}]'.format(bu_1[jj],bu_1[jj+1]))
-        print('BS个数：{}'.format(y_bs__[0]))
-        print('DDPG个数：{}'.format(y_ddpg__[0]))
+        print('Interval[{},{}]'.format(bu_1[jj],bu_1[jj+1]))
+        print('Number of BS：{}'.format(y_bs__[0]))
+        print('Number of DDPG：{}'.format(y_ddpg__[0]))
         y_ddpg__.pop(0)
         y_bs__.pop(0)
-    print('区间段[-2.5,2.5]')
-    print('BS个数{}:'.format(y_bs__[0]))
-    print('DDPG个数{}'.format(y_ddpg__[0]))
+    print('Interval[-2.5,2.5]')
+    print('Number of BS{}:'.format(y_bs__[0]))
+    print('Number of DDPG{}'.format(y_ddpg__[0]))
     y_ddpg__.pop(0)
     y_bs__.pop(0)
     for jjj in range(4):
-        print('区间段[{},{}]'.format(bu_2[jjj], bu_2[jjj + 1]))
-        print('BS个数：{}'.format(y_bs__[0]))
-        print('DDPG个数：{}'.format(y_ddpg__[0]))
+        print('Interval[{},{}]'.format(bu_2[jjj], bu_2[jjj + 1]))
+        print('Number of BS：{}'.format(y_bs__[0]))
+        print('Number of DDPG：{}'.format(y_ddpg__[0]))
         y_ddpg__.pop(0)
         y_bs__.pop(0)
 
@@ -309,13 +309,13 @@ def calculate_gain(agent, data_flag,use_bs=is_bs,option_type=type_option):
     """
     bucket = {}
     for flag in data_flag:
-        print('新合约...')
+        print('New contract...')
         contract_now = contract[flag]
         i = 0
         max_i = contract_now.shape[0] - 1
         delta_ddpg_list = []
-        S = contract_now.iloc[0, 4]  # 标的价格
-        V = contract_now.iloc[0, 6]  # 期权价格
+        S = contract_now.iloc[0, 4]  # Target price
+        V = contract_now.iloc[0, 6]  # Option price
         delta_BS = contract_now.iloc[0, 5]
         state = [S, V]
         state = np.reshape(state, (1, 2))
@@ -390,7 +390,7 @@ def main(use_bs=is_bs,option_type=type_option):
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
         for n in range(1, int(train_num) + 1):
-            print('第{}轮训练。。。'.format(n))
+            print('Training round {}. . .'.format(n))
             step=0
             contract_flag = 0
             temp = 0
@@ -427,8 +427,8 @@ def main(use_bs=is_bs,option_type=type_option):
                 V_next = contract_now.iloc[i + 1, 6]
                 delta_BS = contract_now.iloc[i, 5]
                 action = agent.select_action(state)
-                print('输出的DDPG头寸为{}'.format(action))
-                print('BS公式头寸为{}'.format(delta_BS))
+                print('The output DDPG position is{}'.format(action))
+                print('BS formula position is{}'.format(delta_BS))
                 if use_bs == 1:
                     action = delta_BS + action / fenmu
                 if option_type == 'C':
@@ -449,8 +449,8 @@ def main(use_bs=is_bs,option_type=type_option):
                 Bank_money_ddpg = Bank_money_ddpg * (1 + bank_ratio)
                 error_ddpg=V_next - action * S_next - Bank_money_ddpg
                 error_bs=V_next - delta_BS * S_next - Bank_money_bs
-                print('DDPG误差为{}'.format(error_ddpg))
-                print('BS误差为{}'.format(error_bs))
+                print('DDPG error is{}'.format(error_ddpg))
+                print('BS error is{}'.format(error_bs))
 
                 state_next = [S_next, V_next]
                 state_next = np.reshape(state_next, (1, 2))
