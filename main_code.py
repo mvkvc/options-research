@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/')
+
 from ddpg_daibing.ddpg_model import Model
 from ddpg_daibing.ddpg import Agent
 from ddpg_daibing.ReplayBuffer import Replay_Buffer
@@ -32,13 +35,14 @@ option='SPX_C'
 #############注意SP500数据列的顺序#########
 ####get training data###################
 base_path=os.path.dirname(os.getcwd())
-path = os.path.join(base_path, 'train_data/SPX_C_train_filterdelta.csv')
+path = os.path.join(base_path, 'ddpg_daibing/train_data/SPX_C_train_filterdelta.csv')
 contract_data = pd.read_csv(path).groupby(['RooT', 'expiration', 'strike'])
 ########################################
 contract = [df for item, df in contract_data ]
 # Upset the training and testing sample to eliminate the correlation
 random.shuffle(contract)
-print('合约数量：{}'.format(len(contract)))
+#
+#print('合约数量：{}'.format(len(contract)))
 state_dim = 2
 action_dim = 1
 #Initialize Agent,memory Buffer,OU process
