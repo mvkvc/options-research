@@ -422,7 +422,7 @@ def main(use_bs=is_bs,option_type=type_option):
             error_ddpg_pre=0
             while not done:
                 step+=1
-                print('one episode continue。。。')
+                print('one episode continue...')
                 S_next = contract_now.iloc[i + 1, 4]
                 V_next = contract_now.iloc[i + 1, 6]
                 delta_BS = contract_now.iloc[i, 5]
