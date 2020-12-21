@@ -14,7 +14,7 @@ import os
 import csv
 #12 2 point more and 1 point more，0.4 start negative; 13 1.5几，0.4 about
 fenmu = 13#the factor to mutiply the outcome of ActorNetwork,then add delta_BS
-BATCH_SIZE = 2 ** 10
+BATCH_SIZE = 2 ** 12
 BUFFER_SIZE = 1e4
 DISCOUNT_FACTOR = 0.98#discount factor
 ACTOR_LEARNING_RATE = 1e-3
