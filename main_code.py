@@ -390,7 +390,7 @@ def main(use_bs=is_bs,option_type=type_option):
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
         for n in range(1, int(train_num) + 1):
-            print('Training round {}. . .'.format(n))
+            print('Training round {}...'.format(n))
             step=0
             contract_flag = 0
             temp = 0
