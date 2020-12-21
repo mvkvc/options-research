@@ -42,7 +42,7 @@ contract = [df for item, df in contract_data ]
 # Upset the training and testing sample to eliminate the correlation
 random.shuffle(contract)
 #
-print('Number of contracts：{}'.format(len(contract)))
+print('Number of contracts: {}'.format(len(contract)))
 state_dim = 2
 action_dim = 1
 #Initialize Agent,memory Buffer,OU process
