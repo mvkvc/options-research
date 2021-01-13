@@ -10,6 +10,7 @@ import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import random
+import requests
 import os
 import csv
 #12 2 point more and 1 point more，0.4 start negative; 13 1.5几，0.4 about
@@ -506,6 +507,9 @@ def main(use_bs=is_bs,option_type=type_option):
         print(Gain_test)
         print('Gain Bucket items\' num out of Sample:')
         print(bucket_num_test)
+
+        ntfy_data = 'Training completed.'
+        response = requests.post('https://notify.run/2tIWdaItl7cWhQpB', data=ntfy_data)
 
 if __name__ == '__main__':
     main()
