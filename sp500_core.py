@@ -43,7 +43,7 @@ mingan = 'SPX_C_0.001'
 dic = 'SPX_C_wan10'
 #####注意SP500数据列的顺序#########
 base_path = os.path.dirname(os.getcwd())
-path = os.path.join(base_path, 'data_over/' + option + '.csv')
+path = os.path.join(base_path, 'ddpg_daibing/train_data/' + option + '.csv')
 contract_data = pd.read_csv(path).groupby(['root', 'exdate', 'strike price'])
 contract = [df for item, df in contract_data]
 foot_path = os.path.join(base_path, 'ddpg_daibing/good_weekly/' + 'SPX_C_foot' + '.txt')
