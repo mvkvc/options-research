@@ -11,11 +11,6 @@ class Replay_Buffer(object):
         return self.memory
 
     def store_transition(self, transition):
-        """
-        store memory item
-        :param transition:
-        :return:
-        """
         self.memory.append(transition)
 
     def store_transitions(self, transitions):
@@ -26,11 +21,6 @@ class Replay_Buffer(object):
             self.memory.extend(transitions)
 
     def get_batch(self, batch_size=None):
-        """
-        get training batch
-        :param batch_size:
-        :return:
-        """
         b_s = batch_size or self.batch_size
         cur_men_size = len(self.memory)
         if cur_men_size < b_s:

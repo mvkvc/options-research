@@ -4,8 +4,9 @@ import numpy as np
 
 
 class DDPG_Actor(object):
-    def __init__(self, state_dim=2, action_dim=1, optimizer=None, learning_rate=0.001, tau=0.001, scope="", sess=None):
+    def __init__(self, type,state_dim=8, action_dim=1, optimizer=None, learning_rate=0.001, tau=0.001, scope="", sess=None):
         self.scope = scope
+        self.type=type
         self.sess = sess
         self.spot_0=0
         self.spot_1=5
@@ -22,9 +23,9 @@ class DDPG_Actor(object):
         self.l2_reg = 0.01
         self.optimizer = optimizer or tf.train.AdamOptimizer(self.learning_rate)
         self.tau = tau
-        self.h1_dim = 400
-        self.h2_dim = 800
-        self.h3_dim = 400
+        self.h1_dim =2400 #400
+        self.h2_dim =4800 #800
+        self.h3_dim =2400 #400
         self.activation = tf.nn.relu
         self.kernel_initializer = tf.contrib.layers.variance_scaling_initializer()
         # fan-out uniform initializer which is different from original paper
@@ -171,7 +172,6 @@ class DDPG_Actor(object):
     def run_layer_weight_target(self, sess=None):
         sess = sess or self.sess
         return sess.run([self.h1_weight_target, self.h1_bias_target])
-
     def layer_process(self,spot,u,v,type):
         value=v
         if spot == self.spot_2:

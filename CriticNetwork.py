@@ -11,9 +11,9 @@ class DDPG_Critic(object):
         self.l2_reg = 0.01
         self.optimizer = optimizer or tf.train.AdamOptimizer(self.learning_rate)
         self.tau = tau
-        self.h1_dim = 400
-        self.h2_dim = 600#100
-        self.h3_dim = 400
+        self.h1_dim =2400 #400
+        self.h2_dim =3600 #600
+        self.h3_dim =2400 #400
         self.loss_critic=[]
         self.activation = tf.nn.relu
         self.kernel_initializer = tf.contrib.layers.variance_scaling_initializer()

@@ -1,8 +1,9 @@
 import numpy as np
 
 class Agent(object):
-    def __init__(self, model, replay_buffer, exploration_noise, discout_factor, verbose=False):
+    def __init__(self,type, model, replay_buffer, exploration_noise, discout_factor, verbose=False):
         self.model = model
+        self.type=type
         self.replay_buffer = replay_buffer
         self.exploration_noise = exploration_noise
         self.discout_factor = discout_factor
@@ -18,7 +19,7 @@ class Agent(object):
         :param observation:
         :return:
         """
-        pred_action = self.predict_action(observation)
+        pred_action = self.predict_action(observation) if self.type=="C" else -self.predict_action(observation)
         action= self.exploration_noise.return_noise(pred_action)
         return action
 
