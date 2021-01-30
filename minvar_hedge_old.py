@@ -1,58 +1,22 @@
 # %%
-# from datetime import datetime, timedelta
-# import numpy as np
+from datetime import datetime, timedelta
+import numpy as np
 import pandas as pd
-from py_vollib.black_scholes.implied_volatility import implied_volatility as iv
-# from scipy import stats
-# from tqdm import trange
-
-
-contracts = "SPX_C_train_filterdelta.csv"
-df = pd.read_csv(filepath=contracts)
-
-imp_v = iv(price, S, K, t, r, flag)
-
-
-
-
-df['Flag'] = 'C'
-
-df_contracts = price_dataframe(df, flag_col='Flag', underlying_price_col='S', strike_col='K', annualized_tte_col='T',
-                     riskfree_rate_col='R', sigma_col='IV', model='black_scholes', inplace=False)
-
+from scipy import stats
+from tqdm import trange
 
 # %%
 filepath = "SPX_C_train_filterdelta.csv"
 filepath_prices = "SPX_prices.csv"
 rebalance_interval = 14
-starting_cash = 10000 # No accounting for running out of money currently
 interest_rate = 0.05
-dividend_yield = 0.05
 contract_multiplier = 1
 vol_lookback = 50
-gamma_a = 1
 
 # %%
-def calc_del_bs(S, K, T, r, sigma, dividend_yield, option_type="call"):
+def calc_vega_bs(S, T, del_bs):
 
-    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
-
-    if option_type == "call":
-        del_bs = np.exp(-dividend_yield * T) * stats.norm.cdf(d1)
-
-    elif option_type == "put":
-        del_bs = np.exp(-dividend_yield * T) * (stats.norm.cdf(d1) - 1)
-
-    else:
-        raise ValueError("Not a valid option type.")
-
-    return del_bs
-
-
-# %%
-def calc_vega_bs(S, T, del_bs, gamma_a):
-
-    vega_bs = S * np.sqrt(T) * (stats.gamma.cdf(del_bs, gamma_a))
+    vega_bs = S * np.sqrt(T) * (stats.gamma.cdf(del_bs, 1))
 
     return vega_bs
 
@@ -75,7 +39,6 @@ def sim_del_hedge(
     dividend_yield=dividend_yield,
     contract_multiplier=contract_multiplier,
     vol_lookback=vol_lookback,
-    gamma_a=gamma_a
 ):
 
     with open(filepath) as f:
@@ -91,7 +54,6 @@ def sim_del_hedge(
     port_cash = starting_cash
     port_shares = 0
     
-    # for row in range(start_row, 10):
     for row in trange(start_row, num_rows):
 
         print(row)
@@ -124,8 +86,7 @@ def sim_del_hedge(
             sigma = np.sqrt(np.var(prices.underlying_price[price_lookback:price_today+1]))
 
             del_bs = df.delta[row]
-            # del_bs = calc_del_bs(S, K, T, r, sigma, dividend_yield)
-            vega_bs = calc_vega_bs(S, T, del_bs, gamma_a)
+            vega_bs = calc_vega_bs(S, T, del_bs)
             del_mv = calc_del_mv(S, T, del_bs, vega_bs)
 
             port_shares = port_shares + (del_mv * contract_multiplier)
@@ -155,9 +116,7 @@ def main():
         filepath,
         filepath_prices,
         rebalance_interval,
-        starting_cash,
         interest_rate,
-        dividend_yield,
         contract_multiplier,
         vol_lookback,
     )
