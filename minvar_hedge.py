@@ -4,6 +4,9 @@ from numpy.polynomial.polynomial import Polynomial
 import pandas as pd
 from tqdm import trange
 
+pd.set_option('mode.chained_assignment', None)
+# pd.options.mode.chained_assignment = 'raise'
+
 # %%
 def df_transform(df):
     df["option_changed"] = (df[["exdate", "strike price"]].shift(-1) != df[["exdate", "strike price"]]).all(axis=1)
@@ -23,7 +26,6 @@ def df_transform(df):
 # %%
 def calc_gain(df):
     gain = 1 - ((df["err_mv"] ** 2).sum() / (df["err_del"] ** 2).sum())
-    # TODO: Calc gain and exclude outliers
 
     return gain
     
@@ -36,7 +38,8 @@ def mv_hedge(filepath, est_days):
     num_rows, _ = df.shape
     row_acc = 0
     month_acc = -1
-    
+
+    # for row in trange(1, 1000):
     for row in trange(1, num_rows - 1):
         if df["option_changed"].iloc[row]:
             row_acc = 0
@@ -100,6 +103,9 @@ def main():
     filepath = "train_data/SPX_C.csv" # TODO: Add option to run puts as well "train_data/SPX_P.csv"
     est_days = 36 * 30
     df = mv_hedge(filepath, est_days)
+    df = df[df["del_quad"] != -1]
+    fin_num_rows, _ = df.shape
+    df = df.reset_index().drop([0, fin_num_rows - 1]) # TODO: Check if needed
     gain = calc_gain(df)
     df.to_csv("mv_hedge_C_gain_" + str(round(gain, 2)) + ".csv")
 
