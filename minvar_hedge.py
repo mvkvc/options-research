@@ -1,25 +1,30 @@
 # %%
 import numpy as np
-from numpy.polynomial.polynomial import Polynomial
+from numpy.polynomial import Polynomial
 import pandas as pd
 from tqdm import trange
 
 pd.set_option('mode.chained_assignment', None)
 # pd.options.mode.chained_assignment = 'raise'
 
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+
 # %%
 def df_transform(df):
     df["option_changed"] = (df[["exdate", "strike price"]].shift(-1) != df[["exdate", "strike price"]]).all(axis=1)
-    df["T"] = df["time to maturity"] / 365
+    df["T"] = df["time to maturity"] / 252 # TODO: Check impact
     df["del_f"] = df["option price"].diff()
     df["del_S"] = df["underlying price"].diff() 
-    df["err_del"] = df["del_f"] - df["delta"] * df["del_S"]
+    df["err_del"] = df["del_f"] - (df["delta"] * df["del_S"])
     df["regr_term"] = (df["vega"] / np.sqrt(df["T"])) * (df["del_S"] / df["underlying price"])
     df["regr_y"] = df["err_del"] / df["regr_term"]
     df["del_mv_term"] = df["vega"]/(df["underlying price"] * df["T"])
     df["del_quad"] = -1
     df["del_mv"] = -1
     df["err_mv"] = -1
+    df["row_acc"] = -1
+    df["month_acc"] = -1
 
     return df
 
@@ -58,12 +63,16 @@ def mv_hedge(filepath, est_days):
             month_acc = 0
 
         if month_acc == 0:
-           X = df["delta"].iloc[row - est_days - 1:row]
-           y = df["regr_y"].iloc[row - est_days - 1:row]
-           u = Polynomial.fit(X, y, 2)
+            X = df["delta"].iloc[row - est_days - 1:row]
+            y = df["regr_y"].iloc[row - est_days - 1:row]
+            u = Polynomial.fit(X, y, deg=2)
+        # 
 
         if row_acc >= est_days:
-            df["del_quad"].iloc[row] = u(df["delta"].iloc[row])
+            df["del_quad"].iloc[row] = u(df["delta"].iloc[row]) # TODO: Error here
+
+        # df["row_acc"].iloc[row] = row_acc
+        # df["month_acc"].iloc[row] = month_acc
         
         # print(row, row_acc, month_acc)
 
@@ -100,6 +109,8 @@ def mv_hedge(filepath, est_days):
 
 # %%
 def main():
+    # filepath = "hedge_test.csv"
+    # est_days = 1 * 30
     filepath = "train_data/SPX_C.csv" # TODO: Add option to run puts as well "train_data/SPX_P.csv"
     est_days = 36 * 30
     df = mv_hedge(filepath, est_days)
