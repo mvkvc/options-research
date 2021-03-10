@@ -1,5 +1,6 @@
-tensorflow_gpu==1.3.0
+matplotlib
 numpy
 pandas
-matplotlib
 requests
+tensorflow
+# tensorflow_gpu==1.3.0
