@@ -41,3 +41,19 @@ subordinary reward=1/100*(|error ddpg_t-1|-|error ddpg_t|)
 subordinary+=1/1000*|error ddpg| if |error ddpg|>2.5
 
 main reward=1000 if |terminal hedging error|<2.5
+
+I.	Running environment：
+1.	python 3.6,tensorflow-gpu 1.3
+#Function of main codes#
+2.	ActorNetwork:To build ActorNetwork and to configure relative initial processing
+3.	CriticNetwork:To build CriticNetwork and to configure relative initial processing
+4.	ddpg:mainly package some training ,store memory item,select action functions
+5.	ddpg_model:ddpg.Do further package for Network’s optimization based on class Agent.
+6.	OU：The initialization of OU process,and some function add OU noise to action output by ActorNetwork.
+7.	Replay Buffer：Memory Replay Buffer,mainly define relative function for Buffer.
+8.	Sp500_core:core code to train DDPG model and test the hedging performance.
+II.	Illustration of training Data：
+   We used Data of call option on SPX,and filter these contracts:
+1.	The contract whose lifetime less than two weeks.
+2.	The contract whose  average BS delta greater than 0.95.
+Before training,we upset the training data to eliminate the sample correlation.
