@@ -26,15 +26,17 @@ df = pd.read_csv(path)
 
 #%%
 df["option_changed"] = (
-        df[["exdate", "strike price"]].shift(-params["bal_per"])
-        != df[["exdate", "strike price"]]
+    df[["exdate", "strike price"]].shift(-params["bal_per"])
+    != df[["exdate", "strike price"]]
 ).any(axis=1)
 
 df["next_S"] = df["underlying price"].shift(-params["bal_per"])
 df["next_f"] = df["option price"].shift(-params["bal_per"])
 
 df["del_S"] = df["underlying price"].diff().shift(-params["bal_per"])
-df["del_f"] = df["option price"].diff().shift(-params["bal_per"]) # TODO: Sample 100 random and confirm they line up
+df["del_f"] = (
+    df["option price"].diff().shift(-params["bal_per"])
+)  # TODO: Sample 100 random and confirm they line up
 
 #%%
 # Scale next_S, del_S by S
@@ -48,7 +50,7 @@ df["scal_del_f"] = (df["next_f"] - df["option price"]) / df["underlying price"]
 
 #%%
 df["T"] = df["time to maturity"] / params["T_days"]
-df["err_del"] = df["scal_del_f"] - df["delta"] * df["scal_del_S"]
+df["err_del"] = df["del_f"] - df["delta"] * df["del_S"]
 df["regr_term"] = (df["vega"] / np.sqrt(df["T"])) * df["scal_del_S"]
 df["regr_y"] = df["err_del"] / df["regr_term"]
 
@@ -62,10 +64,12 @@ df["mth_id"] = df["mth_yr"].map(mth_dict)
 df[["regr_term", "regr_y"]].replace(
     [np.inf, -np.inf], np.nan
 )  # TODO: Evaluate removing inf now or later
-df.dropna(subset=["regr_term", "regr_y"], inplace=True) #TODO: Count removed vs remaining
+df.dropna(
+    subset=["regr_term", "regr_y"], inplace=True
+)  # TODO: Count removed vs remaining
 
 #%%
-df = df[df["option_change"] == False]
+df = df[df["option_changed"] == False]
 df = df[df["time to maturity"] >= 14]
 
 if params["type"] == "C":
@@ -89,8 +93,10 @@ len_mths = len(mth_dict.values())
 
 for mth in range(params["lookback_mths"], len_mths):
     last_mths = list(range(max(0, mth - params["lookback_mths"]), mth))
-    fit_rows = df[df["mth_id"].isin(last_mths)].index
-    mth_rows = df[df["mth_id"] == mth].index
+    fit_rows = (df["mth_id"].isin(last_mths)).index
+    mth_rows = (df["mth_id"] == mth).index
+    # fit_rows = df[df["mth_id"].isin(last_mths)].index
+    # mth_rows = df[df["mth_id"] == mth].index
 
     # no_outl = df["regr_y"].iloc[fit_rows]
     # outl_mean = np.mean(no_outl)
@@ -114,7 +120,9 @@ for mth in range(params["lookback_mths"], len_mths):
 #%%
 df["quad_fnc"] = df["c"] + df["b"] * df["delta"] + df["a"] * df["delta"] ** 2
 
-df["mv_delta"] = df["delta"] + df["vega"] / (df["scal_S"] * np.sqrt(df["T"])) * df["quad_fnc"]
+df["mv_delta"] = (
+    df["delta"] + df["vega"] / (df["scal_S"] * np.sqrt(df["T"])) * df["quad_fnc"]
+)
 
 df = df[
     df["mth_id"] >= params["lookback_mths"]

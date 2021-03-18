@@ -1,4 +1,5 @@
 /.DS_Store
+/.vscode
 /.directory
 /train_data
 /__pycache__
