@@ -1,7 +1,11 @@
-# TODO: Remove last entry in df_plt
 # DONE: Check date of next make it <5
 # DONE: Option price >0
 # DONE: option_changed = True
+
+# TODO: Remove last entry in df_plt
+# TODO: Test with T not scaled
+# TODO: Test removing calls with delta working
+# TODO: Test with subsets of tickers
 
 # %%
 import matplotlib.pyplot as plt
@@ -23,7 +27,7 @@ params = {
     "bal_per": 1,
     "lookback_mths": 12,
     "T_days": 252,
-    "excel_rows": 10000,
+    "excel_rows": 100000,
 }
 
 #%%
@@ -52,11 +56,16 @@ df["scal_del_S"] = df["scal_next_S"] - 1
 
 # Scale f, del_f by next_S
 df["scal_f"] = df["option price"] / df["underlying price"]
-df["scal_del_f"] = (df["next_f"] - df["option price"]) / df["underlying price"]
+df["scal_next_f"] = df["next_f"] / df["underlying price"]
+df["scal_del_f"] = df["scal_next_f"] - df["scal_f"]
 
 #%%
+# df["T"] = df["time to maturity"]
 df["T"] = df["time to maturity"] / params["T_days"]
+
+# df["err_del"] = df["scal_del_f"] - (df["delta"] * df["scal_del_S"])
 df["err_del"] = df["del_f"] - (df["delta"] * df["del_S"])
+
 df["regr_term"] = (df["vega"] / np.sqrt(df["T"])) * df["scal_del_S"]
 df["regr_y"] = df["err_del"] / df["regr_term"]
 
@@ -70,9 +79,6 @@ df["mth_id"] = df["mth_yr"].map(mth_dict)
 df[["regr_term", "regr_y"]].replace(
     [np.inf, -np.inf], np.nan
 )  # TODO: Evaluate removing inf now or later
-df.dropna(
-    subset=["regr_term", "regr_y"], inplace=True
-)  # TODO: Count removed vs remaining
 
 #%%
 df = df[:-1]
@@ -103,8 +109,6 @@ df.reset_index(drop=True, inplace=True)
 
 for mth in range(params["lookback_mths"], len_mths):
     last_mths = list(range(max(0, mth - params["lookback_mths"]), mth))
-    # fit_rows = (df["mth_id"].isin(last_mths)).index
-    # mth_rows = (df["mth_id"] == mth).index
     fit_rows = df[df["mth_id"].isin(last_mths)].index
     mth_rows = df[df["mth_id"] == mth].index
 
@@ -128,32 +132,23 @@ for mth in range(params["lookback_mths"], len_mths):
     df["c"].iloc[mth_rows] = poly_fit[2]
 
 #%%
-df["quad_fnc"] = df["c"] + df["b"] * df["delta"] + df["a"] * df["delta"] ** 2
+df = df[df["mth_id"] >= params["lookback_mths"]]
+df.dropna(subset=["regr_term", "regr_y", "a", "b", "c"], inplace=True)
+
+#%%
+df["quad_fnc"] = df["c"] + (df["b"] * df["delta"]) + (df["a"] * (df["delta"] ** 2))
 
 # TODO: Check formula
 df["mv_delta"] = df["delta"] + (
     df["vega"] / (df["underlying price"] * np.sqrt(df["T"])) * df["quad_fnc"]
 )
 
-# df["mv_delta"] = df["delta"] + (
-#     df["vega"] / (df["underlying price"] * np.sqrt(df["T"])) * df["quad_fnc"]
-# )
-
-df = df[
-    df["mth_id"] >= params["lookback_mths"]
-]  # Remove rows that are missing prediction
-
-df.dropna(subset=["a", "b", "c"], inplace=True)
-
-#%%
-# df["scal_err_mv"] = (
-#     df["scal_del_f"] - df["mv_delta"] * df["del_S"]
-# )
-
 df["err_mv"] = (
     df["del_f"] - df["delta"] * df["del_S"] - df["regr_term"] * df["quad_fnc"]
 )
 
+
+#%%
 gain = 1 - ((df["err_mv"] ** 2).sum() / (df["err_del"] ** 2).sum())
 
 cols = [
@@ -169,12 +164,15 @@ cols = [
     "implied volatility",
     "time to maturity",
     "T",
+    "option_changed",
+    "date_diff",
     "del_f",
     "del_S",
     "next_f",
     "next_S",
     "scal_next_S",
     "scal_del_S",
+    "scal_next_f",
     "scal_del_f",
     "regr_term",
     "regr_y",
@@ -194,7 +192,8 @@ df = df[cols]
 # df.dropna(subset=["err_mv", "regr_y"], inplace=True)
 
 #%%
-df.iloc[0 : params["excel_rows"]].to_excel(
+rnd_id = np.random.randint(low=0, high=(len(df) - params["excel_rows"]), size=1)[0]
+df.iloc[rnd_id : (rnd_id + params["excel_rows"])].to_excel(
     "results/" + params["type"] + "_" + str(round(gain, 2)) + ".xlsx"
 )
 
@@ -210,7 +209,6 @@ plt.savefig("results/polyfit_coef_" + str(round(gain, 2)) + ".png")
 df["regr_y"].plot(figsize=(10, 5), grid=True)
 
 # %%
-x = df[abs(df["regr_y"]) > 0.1][100000:200000]
-x.to_csv("test.csv")
-
-# %%
+# TESTING HERE
+# x = df[abs(df["regr_y"]) > 0.1][100000:200000]
+# x.to_csv("test.csv")
