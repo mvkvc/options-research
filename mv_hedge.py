@@ -1,3 +1,8 @@
+# TODO: Remove last entry in df_plt
+# DONE: Check date of next make it <5
+# DONE: Option price >0
+# DONE: option_changed = True
+
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,19 +35,20 @@ df["option_changed"] = (
     != df[["exdate", "strike price"]]
 ).any(axis=1)
 
+df["date_diff"] = np.array(
+    pd.to_datetime(df["quote_date"]).diff().shift(-params["bal_per"]), dtype=np.int16
+)
+
 df["next_S"] = df["underlying price"].shift(-params["bal_per"])
 df["next_f"] = df["option price"].shift(-params["bal_per"])
 
 df["del_S"] = df["underlying price"].diff().shift(-params["bal_per"])
-df["del_f"] = (
-    df["option price"].diff().shift(-params["bal_per"])
-)  # TODO: Sample 100 random and confirm they line up
+df["del_f"] = df["option price"].diff().shift(-params["bal_per"])
 
 #%%
 # Scale next_S, del_S by S
-df["scal_S"] = 1
 df["scal_next_S"] = df["next_S"] / df["underlying price"]
-df["scal_del_S"] = df["scal_next_S"] - df["scal_S"]
+df["scal_del_S"] = df["scal_next_S"] - 1
 
 # Scale f, del_f by next_S
 df["scal_f"] = df["option price"] / df["underlying price"]
@@ -50,7 +56,7 @@ df["scal_del_f"] = (df["next_f"] - df["option price"]) / df["underlying price"]
 
 #%%
 df["T"] = df["time to maturity"] / params["T_days"]
-df["err_del"] = df["del_f"] - df["delta"] * df["del_S"]
+df["err_del"] = df["del_f"] - (df["delta"] * df["del_S"])
 df["regr_term"] = (df["vega"] / np.sqrt(df["T"])) * df["scal_del_S"]
 df["regr_y"] = df["err_del"] / df["regr_term"]
 
@@ -69,8 +75,11 @@ df.dropna(
 )  # TODO: Count removed vs remaining
 
 #%%
+df = df[:-1]
+
 df = df[df["option_changed"] == False]
 df = df[df["time to maturity"] >= 14]
+df = df[df["date_diff"] < 5]
 
 if params["type"] == "C":
     df = df[(df["delta"] > 0.05) & (df["delta"] < 0.95)]
@@ -82,21 +91,22 @@ else:
 if len(tickers) > 0:
     df = df[df["root"].isin(tickers)]
 
-# df = df[df["option price"] > 0]
-# df = df[df["next_f"] > 0] # TODO: Test without
+df = df[df["option price"] > 0]
+df = df[df["next_f"] > 0]  # TODO: Test without
 
 #%%
 df["a"] = np.nan
 df["b"] = np.nan
 df["c"] = np.nan
 len_mths = len(mth_dict.values())
+df.reset_index(drop=True, inplace=True)
 
 for mth in range(params["lookback_mths"], len_mths):
     last_mths = list(range(max(0, mth - params["lookback_mths"]), mth))
-    fit_rows = (df["mth_id"].isin(last_mths)).index
-    mth_rows = (df["mth_id"] == mth).index
-    # fit_rows = df[df["mth_id"].isin(last_mths)].index
-    # mth_rows = df[df["mth_id"] == mth].index
+    # fit_rows = (df["mth_id"].isin(last_mths)).index
+    # mth_rows = (df["mth_id"] == mth).index
+    fit_rows = df[df["mth_id"].isin(last_mths)].index
+    mth_rows = df[df["mth_id"] == mth].index
 
     # no_outl = df["regr_y"].iloc[fit_rows]
     # outl_mean = np.mean(no_outl)
@@ -120,15 +130,20 @@ for mth in range(params["lookback_mths"], len_mths):
 #%%
 df["quad_fnc"] = df["c"] + df["b"] * df["delta"] + df["a"] * df["delta"] ** 2
 
-df["mv_delta"] = (
-    df["delta"] + df["vega"] / (df["scal_S"] * np.sqrt(df["T"])) * df["quad_fnc"]
+# TODO: Check formula
+df["mv_delta"] = df["delta"] + (
+    df["vega"] / (df["underlying price"] * np.sqrt(df["T"])) * df["quad_fnc"]
 )
+
+# df["mv_delta"] = df["delta"] + (
+#     df["vega"] / (df["underlying price"] * np.sqrt(df["T"])) * df["quad_fnc"]
+# )
 
 df = df[
     df["mth_id"] >= params["lookback_mths"]
 ]  # Remove rows that are missing prediction
 
-# df.dropna(subset=["a", "b", "c"], inplace=True)
+df.dropna(subset=["a", "b", "c"], inplace=True)
 
 #%%
 # df["scal_err_mv"] = (
@@ -136,7 +151,7 @@ df = df[
 # )
 
 df["err_mv"] = (
-    df["del_f"] - df["mv_delta"] * df["del_S"] - df["regr_term"] * df["quad_fnc"]
+    df["del_f"] - df["delta"] * df["del_S"] - df["regr_term"] * df["quad_fnc"]
 )
 
 gain = 1 - ((df["err_mv"] ** 2).sum() / (df["err_del"] ** 2).sum())
@@ -190,3 +205,12 @@ df_plt["-b"] = -df_plt["b"]
 df_plt = df_plt[["mth_yr", "a", "-b", "c"]]
 df_plt.plot(figsize=(10, 5), grid=True)
 plt.savefig("results/polyfit_coef_" + str(round(gain, 2)) + ".png")
+
+#%%
+df["regr_y"].plot(figsize=(10, 5), grid=True)
+
+# %%
+x = df[abs(df["regr_y"]) > 0.1][100000:200000]
+x.to_csv("test.csv")
+
+# %%
