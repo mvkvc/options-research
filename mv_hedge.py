@@ -1,39 +1,31 @@
-# DONE: Check date of next make it <5
-# DONE: Option price >0
-# DONE: option_changed = True
-
-# TODO: Remove last entry in df_plt
-# TODO: Test with T not scaled
-# TODO: Test removing calls with delta working
-# TODO: Test with subsets of tickers
+#%% Generate extract to check formulas
+# rnd_id = np.random.randint(low=0, high=(len(df) - params["excel_rows"]), size=1)[0]
+# df.iloc[rnd_id : (rnd_id + params["excel_rows"])].to_csv("check_data.csv")
+# df["err_del"] = df["del_f"] - (df["delta"] * df["del_S"])
+# tickers=[]
+# if len(tickers) > 0:
+# df = df[df["root"].isin(tickers)]
 
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.polynomial.polynomial import polyfit
-from numpy.polynomial.chebyshev import chebfit
 import pandas as pd
 
-pd.set_option("mode.chained_assignment", None)
+# pd.set_option("mode.chained_assignment", None)
 
 #%%
-tickers = []
-
-#%%
-# path = "train_data/SPX_P.csv" # TODO: Combine put and call files
-path = "train_data/SPX_C.csv"
 params = {
-    # "type": "P",
+    "path": "train_data/SPX_C.csv",
     "type": "C",
     "bal_per": 1,
     "lookback_mths": 12,
     "T_days": 252,
-    # "T_days": 365,
     "excel_rows": 100000,
 }
 
 #%%
-df = pd.read_csv(path)
+df = pd.read_csv(params["path"])
 
 #%%
 df["option_changed"] = (
@@ -54,25 +46,18 @@ df["next_f"] = df["option price"].shift(-params["bal_per"])
 df["del_S"] = df["underlying price"].diff().shift(-params["bal_per"])
 df["del_f"] = df["option price"].diff().shift(-params["bal_per"])
 
-#%%
-# Scale next_S, del_S by S
+#%% Scale next_S, del_S by S
 df["scal_next_S"] = df["next_S"] / df["underlying price"]
-
-# %%
 df["scal_del_S"] = df["scal_next_S"] - 1
 
-# Scale f, del_f by next_S
+#%% Scale f, del_f by next_S
 df["scal_f"] = df["option price"] / df["underlying price"]
 df["scal_next_f"] = df["next_f"] / df["underlying price"]
 df["scal_del_f"] = df["scal_next_f"] - df["scal_f"]
 
 #%%
-# df["T"] = df["time to maturity"]
 df["T"] = df["time to maturity"] / params["T_days"]
-
-df["err_del"] = df["scal_del_f"] - (df["delta"] * df["scal_del_S"])
-# df["err_del"] = df["del_f"] - (df["delta"] * df["del_S"])
-
+df["scal_err_del"] = df["scal_del_f"] - (df["delta"] * df["scal_del_S"])
 df["regr_term"] = (df["vega"] / np.sqrt(df["T"])) * df["scal_del_S"]
 df["regr_y"] = df["err_del"] / df["regr_term"]
 
@@ -83,19 +68,12 @@ mth_dict = dict(zip(list(mth_ids), range(0, len(mth_ids))))
 df["mth_id"] = df["mth_yr"].map(mth_dict)
 
 #%%
-rnd_id = np.random.randint(low=0, high=(len(df) - params["excel_rows"]), size=1)[0]
-df.iloc[rnd_id : (rnd_id + params["excel_rows"])].to_csv("check_data.csv")
-
-#%%
 df = df[:-1]
 
-df = df[abs(df["del_S"]) > 0.1]  # TODO: Test
 df = df[df["date_diff"] < 5]
 
 df = df[df["option_changed"] == False]
 df = df[df["time to maturity"] >= 14]
-df = df[df["option price"] > 0]
-df = df[df["next_f"] > 0]  # TODO: Test without
 
 if params["type"] == "C":
     df = df[(df["delta"] > 0.05) & (df["delta"] < 0.95)]
@@ -104,10 +82,11 @@ elif params["type"] == "P":
 else:
     raise ValueError("Incorrect option type.")
 
-if len(tickers) > 0:
-    df = df[df["root"].isin(tickers)]
+#%% Create parameter df
+columns_param = ["delta", "maturity", "mth_id"]
+df_param = pd.DataFrame(columns=[])
 
-#%%
+
 df["a"] = np.nan
 df["b"] = np.nan
 df["c"] = np.nan
@@ -125,7 +104,7 @@ for mth in range(params["lookback_mths"], len_mths):
     #     deg=2,
     # )
 
-    poly_fit = chebfit(
+    poly_fit = polyfit(
         df["delta"].iloc[fit_rows],
         df["regr_y"].iloc[fit_rows],
         deg=2,
