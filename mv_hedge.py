@@ -1,7 +1,7 @@
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.polynomial.polynomial import polyfit
+from numpy.polynomial.polynomial import Polynomial
 import pandas as pd
 from tqdm import trange
 
@@ -9,18 +9,34 @@ pd.set_option("mode.chained_assignment", None)
 
 #%%
 params = {
-    "path": "train_data/SPX_C.csv",
-    "type": "C",
+    "path": ["train_data/SPX_C.csv", "train_data/SPX_P.csv"],
     "bal_per": 1,
     "lookback_mths": 12,
     "T_days": 252,
     "tickers": [],
     "excel_rows": 100000,
+    "debug": 0,
 }
 
 #%%
-df = pd.read_csv(params["path"])
+df = pd.DataFrame()
+for path in params["path"]:
+    df_ph = pd.read_csv(path)
+    df_ph["type"] = path[path.find(".csv") - 1]
+    df = df.append(df_ph)
 
+#%%
+df["mth_yr"] = pd.to_datetime(df["quote_date"]).dt.to_period("M").astype(str)
+mth_ids = df["mth_yr"].unique().astype(str)
+mth_dict = dict(zip(list(mth_ids), range(0, len(mth_ids))))
+df["mth_id"] = df["mth_yr"].map(mth_dict)
+
+if params["debug"] > 0:
+    df = df[df["mth_id"] < params["debug"]]
+
+len_mths = len(df["mth_id"].unique())
+
+#%%
 if len(params["tickers"]) > 0:
     df = df[df["root"].isin(params["tickers"])]
 
@@ -61,13 +77,6 @@ df["regr_term"] = (df["vega"] / np.sqrt(df["T"])) * df["scal_del_S"]
 df["regr_y"] = df["scal_err_del"] / df["regr_term"]
 
 #%%
-df["mth_yr"] = pd.to_datetime(df["quote_date"]).dt.to_period("M").astype(str)
-mth_ids = df["mth_yr"].unique().astype(str)
-mth_dict = dict(zip(list(mth_ids), range(0, len(mth_ids))))
-df["mth_id"] = df["mth_yr"].map(mth_dict)
-len_mths = len(mth_dict.values())
-
-#%%
 df = df[:-1]
 
 df = df[df["date_diff"] <= 4]
@@ -75,12 +84,9 @@ df = df[df["date_diff"] <= 4]
 df = df[df["option_changed"] == False]
 df = df[df["time to maturity"] >= 14]
 
-if params["type"] == "C":
-    df = df[(df["delta"] > 0.05) & (df["delta"] < 0.95)]
-elif params["type"] == "P":
-    df = df[(df["delta"] < -0.05) & (df["delta"] > -0.95)]
-else:
-    raise ValueError("Incorrect option type.")
+df_1 = df[(df["type"] == "C") & (df["delta"] > 0.05) & (df["delta"] < 0.95)]
+df_2 = df[(df["type"] == "P") & (df["delta"] < -0.05) & (df["delta"] > -0.95)]
+df = df_1.append(df_2)
 
 #%% Create parameter df
 df.reset_index(drop=True, inplace=True)
@@ -90,6 +96,7 @@ df["c"] = np.inf
 
 #%%
 longst_mat = max(df["time to maturity"])
+longst_mat
 bucket_mat = [
     [14, 30],
     [31, 60],
@@ -106,14 +113,10 @@ def range_incl(a, b, add=1):
     return range(a, b + add)
 
 
+#%%
 for mth in trange(params["lookback_mths"], len_mths, desc="Fitting regr"):
     for delta in bucket_del:
         for maturity in bucket_mat:
-            # print(
-            #     "Fitting month: {}, delta: {}, and maturities: {}".format(
-            #         mth, delta, maturity
-            #     )
-            # )
 
             df_regr = df[round(df["delta"], 1) == delta].copy()
             df_regr = df_regr[
@@ -124,38 +127,42 @@ for mth in trange(params["lookback_mths"], len_mths, desc="Fitting regr"):
             fit_rows = df_regr[df_regr["mth_id"].isin(last_mths)].index
             prd_rows = df_regr[df_regr["mth_id"] == mth].index
 
-            if len(fit_rows) > 0:
-                poly_fit = polyfit(
-                    df["delta"].iloc[fit_rows],
-                    df["regr_y"].iloc[fit_rows],
-                    deg=2,
+            if (len(fit_rows) > 0) & (len(prd_rows) > 0):
+                poly = Polynomial([1, 1, 1])
+                a, b, c = poly.fit(
+                    df["delta"].iloc[fit_rows], df["regr_y"].iloc[fit_rows], deg=2
                 )
 
-                df["a"].iloc[prd_rows] = poly_fit[0]
-                df["b"].iloc[prd_rows] = poly_fit[1]
-                df["c"].iloc[prd_rows] = poly_fit[2]
+                df["a"].iloc[prd_rows] = a
+                df["b"].iloc[prd_rows] = b
+                df["c"].iloc[prd_rows] = c
 
 #%%
 df = df[df["mth_id"] >= params["lookback_mths"]]
 
 #%%
-df[["regr_term", "regr_y"]].replace(
-    [np.inf, -np.inf], np.nan
-)  # TODO: Evaluate removing inf now or later
-df.dropna(subset=["regr_y", "a", "b", "c"], inplace=True)
+if params["excel_rows"] > 0:
+    rnd_id = np.random.randint(low=0, high=(len(df) - params["excel_rows"]), size=1)[0]
+    df.iloc[rnd_id : (rnd_id + params["excel_rows"])].to_csv(
+        "results/bfr_filtr.csv"
+    )
 
 #%%
-df["quad_fnc"] = df["c"] + (df["b"] * df["delta"]) + (df["a"] * (df["delta"] ** 2))
-# df["quad_fnc"] = df["a"] + (df["b"] * df["delta"]) + (df["c"] * (df["delta"] ** 2))
+# TODO" FIX THIS
+len1 = len(df)
+df.replace(to_replace=[np.inf, -np.inf], value=[np.nan, np.nan], inplace=True)
+df.dropna(inplace=True)
+len2 = len(df)
+print("Removed {} rows with inf, -inf, or n/a".format(len1 - len2))
+#%%
+df["quad_fnc"] = df["a"] + (df["b"] * df["delta"]) + (df["c"] * (df["delta"] ** 2))
 
 df["mv_delta"] = (
     df["delta"]
     + (df["vega"] / (df["underlying price"] * np.sqrt(df["T"]))) * df["quad_fnc"]
 )
 
-df["err_mv"] = (
-    df["del_f"] - (df["delta"] * df["del_S"]) - (df["regr_term"] * df["quad_fnc"])
-)
+df["err_mv"] = df["del_f"] - (df["delta"] * df["del_S"]) - (df["regr_term"] * df["quad_fnc"]))
 
 df["err_del"] = df["del_f"] - (df["delta"] * df["del_S"])
 
@@ -195,6 +202,7 @@ cols = [
     "mv_delta",
     "err_del",
     "err_mv",
+    "type",
     "mth_yr",
     "mth_id",
 ]
@@ -204,7 +212,7 @@ df = df[cols]
 if params["excel_rows"] > 0:
     rnd_id = np.random.randint(low=0, high=(len(df) - params["excel_rows"]), size=1)[0]
     df.iloc[rnd_id : (rnd_id + params["excel_rows"])].to_csv(
-        "results/" + params["type"] + "_" + str(round(gain, 2)) + ".csv"
+        "results/" + "_" + str(round(gain, 2)) + ".csv"
     )
 
 #%%
