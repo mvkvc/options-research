@@ -15,11 +15,12 @@ params = {
     "T_days": 252,
     "tickers": [],
     "excel_rows": 100000,
-    "debug": 0,
+    "debug": 50,
 }
 
 #%%
 df = pd.DataFrame()
+
 for path in params["path"]:
     df_ph = pd.read_csv(path)
     df_ph["type"] = path[path.find(".csv") - 1]
@@ -32,7 +33,7 @@ mth_dict = dict(zip(list(mth_ids), range(0, len(mth_ids))))
 df["mth_id"] = df["mth_yr"].map(mth_dict)
 
 if params["debug"] > 0:
-    df = df[df["mth_id"] < params["debug"]]
+    df = df[df["mth_id"] < params["debug"] + params["lookback_mths"]]
 
 len_mths = len(df["mth_id"].unique())
 
@@ -143,17 +144,15 @@ df = df[df["mth_id"] >= params["lookback_mths"]]
 #%%
 if params["excel_rows"] > 0:
     rnd_id = np.random.randint(low=0, high=(len(df) - params["excel_rows"]), size=1)[0]
-    df.iloc[rnd_id : (rnd_id + params["excel_rows"])].to_csv(
-        "results/bfr_filtr.csv"
-    )
+    df.iloc[rnd_id : (rnd_id + params["excel_rows"])].to_csv("results/bfr_filtr.csv")
 
 #%%
-# TODO" FIX THIS
 len1 = len(df)
 df.replace(to_replace=[np.inf, -np.inf], value=[np.nan, np.nan], inplace=True)
 df.dropna(inplace=True)
 len2 = len(df)
 print("Removed {} rows with inf, -inf, or n/a".format(len1 - len2))
+
 #%%
 df["quad_fnc"] = df["a"] + (df["b"] * df["delta"]) + (df["c"] * (df["delta"] ** 2))
 
@@ -162,7 +161,9 @@ df["mv_delta"] = (
     + (df["vega"] / (df["underlying price"] * np.sqrt(df["T"]))) * df["quad_fnc"]
 )
 
-df["err_mv"] = df["del_f"] - (df["delta"] * df["del_S"]) - (df["regr_term"] * df["quad_fnc"]))
+df["err_mv"] = (
+    df["del_f"] - (df["delta"] * df["del_S"]) - (df["regr_term"] * df["quad_fnc"])
+)
 
 df["err_del"] = df["del_f"] - (df["delta"] * df["del_S"])
 
