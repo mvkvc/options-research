@@ -1,0 +1,12 @@
+name: research
+channels:
+  - conda-forge
+dependencies:
+  - python=3.6
+  - pip:
+    - tensorflow_gpu==1.3.0
+    - matplotlib
+    - numpy
+    - pandas
+    - requests
+    - ipykernel
