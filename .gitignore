@@ -5,3 +5,4 @@
 /train_data
 /__pycache__
  minvar_results.csv
+**/*.csv
