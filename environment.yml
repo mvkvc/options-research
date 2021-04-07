@@ -9,6 +9,7 @@ dependencies:
   - pandas
   - requests
   - ipykernel
+  - pip
   - pip:
     - tensorflow_gpu==1.3.0
 
